@@ -1,0 +1,227 @@
+#include <iostream>
+using namespace std;
+
+template <class T>
+struct node {
+	T key;
+	node<T> *l;
+	node<T> *r;
+	node<T>* p;
+	node(T key_,node<T> *p_=0,node<T> *l_=0,node<T> *r_=0):key(key_),l(l_),r(r_),p(p_){}
+};
+
+template <class T>
+class binTree {
+	void copyTree(node<T>*&,node<T>*&);
+	void print_(node<T>*, int)const;
+public:
+	node<T> *root;
+	binTree():root(0){}
+	/*	required	*/														// <-------------------------------
+	binTree(binTree<T>& a) {
+		if(!a.root) root=0;
+		else copyTree(root,a.root);
+	}
+	~binTree();
+	void print()const	{cout<<endl<<"- - - - - - - - - -"<<endl<<endl; print_(root,0); cout<<endl;}
+};
+
+/*	required	*/															// <-------------------------------
+template <class T>
+void binTree<T>::copyTree(node<T>*& dest,node<T>*& src) {
+	if(!src) dest = 0;
+	else {
+		dest = new node<T>(src->key);
+		copyTree(dest->l,src->l);
+		copyTree(dest->r,src->r);
+	}
+}
+
+/* using postorder traversal */
+template <class T>
+binTree<T>::~binTree() {
+	node<T> *curr = root;
+	node<T> *prev = curr->p;
+	node<T> *tmp,*del;
+	while(curr) {
+		tmp = curr;
+		if( prev == 0 || prev->l == curr || prev->r == curr ) {
+			if(curr->l)
+				curr=curr->l;
+			else if(curr->r)
+				curr=curr->r;
+			else {
+				del = curr;
+				curr=curr->p;
+				delete del;
+			}
+		} else if(prev == curr->l) {
+			if(curr->r)
+				curr=curr->r;
+			else {
+				del = curr;
+				curr=curr->p;
+				delete del;
+			}
+		} else {
+			del = curr;
+			curr=curr->p;
+			delete del;
+
+		}
+		prev = tmp;
+	}
+}
+
+template <class T>
+void binTree<T>::print_(node<T>* tree, int indent=0)const {
+	if(!tree) return;
+	print_(tree->r, indent+5);
+	for(int i=0; i<indent; i++) cout<<' ';
+	cout<<'('<<tree->key<<')'<<endl;
+	print_(tree->l, indent+5);
+}
+
+template <class T>
+class binSearchTree : public binTree<T> {
+	void Transplant(node<T> *,node<T> *);
+public:
+	void insert(int);
+	void remove(int);
+	node<T>* find(int);
+	node<T>* predecessor(node<T>*);
+	node<T>* successor(node<T>*);
+	node<T>* min();
+	node<T>* max();
+};
+
+template <class T>
+void binSearchTree<T>::insert(int elem) {
+	node<T> *y=0;
+	node<T> *z=new node<T>(elem);
+	node<T> *x=root;
+	while(x) {
+		y=x;
+		if(z->key<x->key) x=x->l;
+		else x=x->r;
+	}
+	z->p=y;
+	if(!y) root = z;
+	else if(z->key<y->key)
+		y->l=z;
+	else
+		y->r=z;
+}
+
+template <class T>
+void binSearchTree<T>::remove(int elem) {
+	node<T> *z = find(elem);
+	if(!z->l)
+		Transplant(z,z->r);
+	else if(!z->r)
+		Transplant(z,z->l);
+	else {
+		node<T> *y=z->r;
+		while(y->l) y=y->l;
+		if(y->p!=z) {
+			Transplant(y,y->r);
+			y->r=z->r;
+			y->r->p=y;
+		}
+		Transplant(z,y);
+		y->l=z->l;
+		y->l->p=y;
+	}
+}
+
+template <class T>
+node<T>* binSearchTree<T>::find(int elem) {
+	node<T> *v=root;
+	while(v && v->key!=elem)
+		if(elem<=v->key)
+			v=v->l;
+		else v=v->r;
+		return v;
+}
+
+template <class T>
+void binSearchTree<T>::Transplant(node<T> *u,node<T> *v) {
+	if(!u->p) root = v;
+	else if(u==u->p->l)
+		u->p->l=v;
+	else u->p->r=v;
+	if(v) v->p = u->p;
+}
+
+template <class T>
+node<T>* binSearchTree<T>::min() {
+	node<T> *v=root;
+	while(v->l) v=v->l;
+	return v;
+}
+
+template <class T>
+node<T>* binSearchTree<T>::max() {
+	node<T> *v=root;
+	while(v->r) v=v->r;
+	return v;
+}
+
+template <class T>
+node<T>* binSearchTree<T>::predecessor(node<T>* ptr) {
+	if(ptr->l) {
+		node<T> *v=ptr->l;
+		while(v->r) v=v->r;
+		return v;
+	}
+	node<T> *y=ptr->p;
+	while(y && ptr==y->l) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+template <class T>
+node<T>* binSearchTree<T>::successor(node<T>* ptr) {
+	if(ptr->r) {
+		node<T> *v=ptr->r;
+		while(v->l) v=v->l;
+		return v;
+	}
+	node<T> *y=ptr->p;
+	while(y && ptr==y->r) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+template <class T>
+class set {
+	binSearchTree<T> *tree;
+public:
+	set():tree(new binSearchTree<T>){}
+	set(int* A,int len):tree(new binSearchTree<T>) {
+		for(int i=0;i<len;i++)
+			tree->insert(A[i]);
+	}
+	~set(){ tree->~binSearchTree();}
+	/*	4	*/															// <-------------------------------
+	set& operator=(set& s1) {
+		if(this!=&s1) tree = new binSearchTree<T>(*s1.tree);
+		return *this;
+	}
+	set(set& a):tree(new binSearchTree<T>(*a.tree)){}
+	void print()const { tree->print();}
+};
+
+int main() {
+	int arr1[] = {1,2,3,4,5,6};
+	int arr2[] = {7,8,9,5,4,2,3};
+	set<int> a(arr1,6),b(arr2,7);
+	set<int> c(a);
+	c = b;
+	c.print();
+	return 0;
+}
