@@ -1,0 +1,295 @@
+#include <iostream>
+using namespace std;
+
+template <class T>
+struct treeNode {
+	T key;
+	treeNode<T> *l;
+	treeNode<T> *r;
+	treeNode<T>* p;
+	treeNode(T key_,treeNode<T> *p_=0,treeNode<T> *l_=0,treeNode<T> *r_=0):key(key_),l(l_),r(r_),p(p_){}
+};
+
+template <class T>
+class binTree {
+	void copyTree(treeNode<T>*&,treeNode<T>*&);
+	void print_(treeNode<T>*, int)const;
+public:
+	treeNode<T> *root;
+	binTree():root(0){}
+	binTree(binTree<T>& a) {
+		if(!a.root) root=0;
+		else copyTree(root,a.root);
+	}
+	~binTree();
+	void print()const	{cout<<endl<<"- - - - - - - - - -"<<endl<<endl; print_(root,0); cout<<endl;}
+};
+
+template <class T>
+void binTree<T>::copyTree(treeNode<T>*& dest,treeNode<T>*& src) {
+	if(!src) dest = 0;
+	else {
+		dest = new treeNode<T>(src->key);
+		copyTree(dest->l,src->l);
+		copyTree(dest->r,src->r);
+	}
+}
+
+/* using postorder traversal */
+template <class T>
+binTree<T>::~binTree() {
+	treeNode<T> *curr = root;
+	treeNode<T> *prev = curr->p;
+	treeNode<T> *tmp,*del;
+	while(curr) {
+		tmp = curr;
+		if( prev == 0 || prev->l == curr || prev->r == curr ) {
+			if(curr->l)
+				curr=curr->l;
+			else if(curr->r)
+				curr=curr->r;
+			else {
+				del = curr;
+				curr=curr->p;
+				delete del;
+			}
+		} else if(prev == curr->l) {
+			if(curr->r)
+				curr=curr->r;
+			else {
+				del = curr;
+				curr=curr->p;
+				delete del;
+			}
+		} else {
+			del = curr;
+			curr=curr->p;
+			delete del;
+
+		}
+		prev = tmp;
+	}
+}
+
+template <class T>
+void binTree<T>::print_(treeNode<T>* tree, int indent=0)const {
+	if(!tree) return;
+	print_(tree->r, indent+5);
+	for(int i=0; i<indent; i++) cout<<' ';
+	cout<<'('<<tree->key<<')'<<endl;
+	print_(tree->l, indent+5);
+}
+
+template <class T>
+class binSearchTree : public binTree<T> {
+	void Transplant(treeNode<T> *,treeNode<T> *);
+public:
+	void insert(T item);
+	void remove(T item);
+	treeNode<T>* find(int);
+	treeNode<T>* inorderPrev(treeNode<T>*);
+	treeNode<T>* inorderNext(treeNode<T>*);
+	treeNode<T>* begin();
+	treeNode<T>* end();
+};
+
+template <class T>
+void binSearchTree<T>::insert(T elem) {
+	treeNode<T> *y=0;
+	treeNode<T> *z=new treeNode<T>(elem);
+	treeNode<T> *x=root;
+	while(x) {
+		y=x;
+		if(z->key<x->key) x=x->l;
+		else x=x->r;
+	}
+	z->p=y;
+	if(!y) root = z;
+	else if(z->key<y->key)
+		y->l=z;
+	else
+		y->r=z;
+}
+
+template <class T>
+void binSearchTree<T>::remove(T elem) {
+	treeNode<T> *z = find(elem.item);
+	if(!z->l)
+		Transplant(z,z->r);
+	else if(!z->r)
+		Transplant(z,z->l);
+	else {
+		treeNode<T> *y=z->r;
+		while(y->l) y=y->l;
+		if(y->p!=z) {
+			Transplant(y,y->r);
+			y->r=z->r;
+			y->r->p=y;
+		}
+		Transplant(z,y);
+		y->l=z->l;
+		y->l->p=y;
+	}
+}
+
+template <class T>
+treeNode<T>* binSearchTree<T>::find(int elem) {
+	treeNode<T> *v=root;
+	while(v && v->key!=elem)
+		if(elem<=v->key)
+			v=v->l;
+		else v=v->r;
+		return v;
+}
+
+template <class T>
+void binSearchTree<T>::Transplant(treeNode<T> *u,treeNode<T> *v) {
+	if(!u->p) root = v;
+	else if(u==u->p->l)
+		u->p->l=v;
+	else u->p->r=v;
+	if(v) v->p = u->p;
+}
+
+template <class T>
+treeNode<T>* binSearchTree<T>::begin() {
+	treeNode<T> *v=root;
+	while(v->l) v=v->l;
+	return v;
+}
+
+template <class T>
+treeNode<T>* binSearchTree<T>::end() {
+	/*treeNode<T> *v=root;
+	while(v->r) v=v->r;*/
+	return 0;
+}
+
+template <class T>
+treeNode<T>* binSearchTree<T>::inorderPrev(treeNode<T>* ptr) {
+	if(ptr->l) {
+		treeNode<T> *v=ptr->l;
+		while(v->r) v=v->r;
+		return v;
+	}
+	treeNode<T> *y=ptr->p;
+	while(y && ptr==y->l) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+template <class T>
+treeNode<T>* binSearchTree<T>::inorderNext(treeNode<T>* ptr) {
+	if(ptr->r) {
+		treeNode<T> *v=ptr->r;
+		while(v->l) v=v->l;
+		return v;
+	}
+	treeNode<T> *y=ptr->p;
+	while(y && ptr==y->r) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+struct el {
+	int item;
+	int count;
+	el(int item_=0,int count_=1):item(item_),count(count_){}
+	bool operator<(el& a) {
+		return item<a.item;
+	}
+	bool operator!=(int a) {
+		return item!=a;
+	}
+	bool operator==(el& a) {
+		return item==a.item && count==a.count;
+	}
+	bool operator<=(el& a) {
+		return item<=a.item;
+	}
+	friend bool operator<=(int a,el& b) {
+		return a<=b.item;
+	}
+	friend ostream& operator<<(ostream& out,el& a) {
+		cout<<a.item<<'['<<a.count<<']';
+		return out;
+	}
+};
+
+template <class T>
+class multiset {
+	binSearchTree<T> *t;
+public:
+	multiset():t(new binSearchTree<T>){}
+	multiset(int* A,int len):t(new binSearchTree<T>) {
+		for(int i=0;i<len;i++) {
+			treeNode<T> *z = t->find(A[i]);
+			if(z) z->key.count++;
+			else t->insert(A[i]);
+		}
+	}
+	~multiset(){ t->~binSearchTree();}
+	multiset& operator=(multiset& s1) {
+		if(this!=&s1) t = new binSearchTree<T>(*s1.t);
+		return *this;
+	}
+	friend bool operator==(multiset& s1,multiset& s2);
+	friend multiset Union(multiset& s1,multiset& s2);
+	friend multiset Difference(multiset& s1,multiset& s2);
+	multiset(multiset& a):t(new binSearchTree<T>(*a.t)){}
+	void print()const { t->print();}
+};
+
+
+/* 4 */
+bool operator==(multiset<el>& s1,multiset<el>& s2) {
+	treeNode<el> *i = s1.t->begin(), *j = s2.t->begin();
+	while( i!= s1.t->end() && j!= s2.t->end() ) {
+		if(i->key.item != j->key.item || i->key.count != j->key.count)
+			return false;
+		i=s1.t->inorderNext(i);
+		j=s2.t->inorderNext(j);
+	}
+	if(i!=j) return false;
+	return true;
+}
+
+multiset<el> Difference(multiset<el> &s1,multiset<el> &s2) {
+	el *tmp = new el;
+	multiset<el> ret;
+	for(treeNode<el> *it1 = s1.t->begin();it1!=s1.t->end();it1 = s1.t->inorderNext(it1)) {
+		bool found = false;
+		int cnt;
+		for(treeNode<el> *it2 = s2.t->begin();it2!=s2.t->end();it2 = s2.t->inorderNext(it2))
+			if(it1->key.item == it2->key.item) {
+				found = true;
+				cnt = it1->key.count - it2->key.count;
+			}
+		if(found) {
+			if(cnt) {
+				tmp->count = abs(cnt);
+				tmp->item = it1->key.item;
+				ret.t->insert(*tmp);
+			}
+		}
+		else ret.t->insert(it1->key);
+	}
+	return ret;
+}
+
+int main() {
+	int arr1[] = {1,1,1,2,3,3,4,5,6};
+	int arr2[] = {7,8,9,5,4,2,3};
+	int arr3[] = {1,1,1,3,6,7};
+	multiset<el> a(arr1,9),b(arr2,7),d(arr3,6);
+	multiset<el> c;
+	c=Difference(a,b);
+	c.print();
+	d.print();
+	cout<<(c==d?"true":"false")<<endl;
+	return 0;
+}
