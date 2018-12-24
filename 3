@@ -1,0 +1,256 @@
+#include <iostream>
+using namespace std;
+
+struct node {
+	int key;
+	node *l;
+	node *r;
+	node* p;
+	node(int key_,node *p_=0,node *l_=0,node *r_=0):key(key_),l(l_),r(r_),p(p_){}
+};
+
+class binTree {
+	void copyTree(node*&,node*&);
+	void print_(node*, int)const;
+public:
+	node *root;
+	binTree():root(0){}
+	binTree(binTree& a) {
+		if(!a.root) root=0;
+		else copyTree(root,a.root);
+	}
+	~binTree();
+	void print()const	{cout<<endl<<"- - - - - - - - - -"<<endl<<endl; print_(root,0); cout<<endl;}
+};
+
+void binTree::copyTree(node*& dest,node*& src) {
+	if(!src) dest = 0;
+	else {
+		dest = new node(src->key);
+		copyTree(dest->l,src->l);
+		copyTree(dest->r,src->r);
+	}
+}
+
+/* using postorder traversal */
+binTree::~binTree() {
+	if(root) {
+		node *curr = root;
+		node *prev = curr->p;
+		node *tmp,*del;
+		while(curr) {
+			tmp = curr;
+			if( prev == 0 || prev->l == curr || prev->r == curr ) {
+				if(curr->l)
+					curr=curr->l;
+				else if(curr->r)
+					curr=curr->r;
+				else {
+					del = curr;
+					curr=curr->p;
+					delete del;
+				}
+			} else if(prev == curr->l) {
+				if(curr->r)
+					curr=curr->r;
+				else {
+					del = curr;
+					curr=curr->p;
+					delete del;
+				}
+			} else {
+				del = curr;
+				curr=curr->p;
+				delete del;
+
+			}
+			prev = tmp;
+		}
+	}
+}
+
+void binTree::print_(node* tree, int indent=0)const {
+	if(!tree) return;
+	print_(tree->r, indent+5);
+	for(int i=0; i<indent; i++) cout<<' ';
+	cout<<'('<<tree->key<<')'<<endl;
+	print_(tree->l, indent+5);
+}
+
+class binSearchTree : public binTree {
+	void Transplant(node *,node *);
+public:
+	void insert(char);
+	void remove(char);
+	node* find(char);
+	node* predecessor(node*);
+	node* successor(node*);
+	node* min();
+	node* max();
+};
+
+void binSearchTree::insert(char elem) {
+	node *y=0;
+	node *z=new node(elem);
+	node *x=root;
+	while(x) {
+		y=x;
+		if(z->key<x->key) x=x->l;
+		else x=x->r;
+	}
+	z->p=y;
+	if(!y) root = z;
+	else if(z->key<y->key)
+		y->l=z;
+	else
+		y->r=z;
+}
+
+void binSearchTree::remove(char elem) {
+	node *z = find(elem);
+	if(!z->l)
+		Transplant(z,z->r);
+	else if(!z->r)
+		Transplant(z,z->l);
+	else {
+		node *y=z->r;
+		while(y->l) y=y->l;
+		if(y->p!=z) {
+			Transplant(y,y->r);
+			y->r=z->r;
+			y->r->p=y;
+		}
+		Transplant(z,y);
+		y->l=z->l;
+		y->l->p=y;
+	}
+}
+
+node* binSearchTree::find(char elem) {
+	node *v=root;
+	while(v && v->key!=elem)
+		if(elem<=v->key)
+			v=v->l;
+		else v=v->r;
+		return v;
+}
+
+void binSearchTree::Transplant(node *u,node *v) {
+	if(!u->p) root = v;
+	else if(u==u->p->l)
+		u->p->l=v;
+	else u->p->r=v;
+	if(v) v->p = u->p;
+}
+
+node* binSearchTree::min() {
+	node *v=root;
+	while(v->l) v=v->l;
+	return v;
+}
+
+node* binSearchTree::max() {
+	node *v=root;
+	while(v->r) v=v->r;
+	return v;
+}
+
+node* binSearchTree::predecessor(node* ptr) {
+	if(ptr->l) {
+		node *v=ptr->l;
+		while(v->r) v=v->r;
+		return v;
+	}
+	node *y=ptr->p;
+	while(y && ptr==y->l) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+node* binSearchTree::successor(node* ptr) {
+	if(ptr->r) {
+		node *v=ptr->r;
+		while(v->l) v=v->l;
+		return v;
+	}
+	node *y=ptr->p;
+	while(y && ptr==y->r) {
+		ptr=y;
+		y=y->p;
+	}
+	return y;
+}
+
+class set {
+	friend set difference(set& s1,set& s2);
+	binSearchTree *tree;
+public:
+	set():tree(new binSearchTree){}
+	set(int* A,int len):tree(new binSearchTree) {
+		for(int i=0;i<len;i++)
+			tree->insert(A[i]);
+	}
+	~set(){ tree->~binSearchTree();}
+	set(const set& a):tree(new binSearchTree(*a.tree)){}
+	void print()const { tree->print();}
+};
+
+/*	required	*/
+void storeInorder(node* p, int inorder[], int *i)
+{
+	if (!p)	return;
+	storeInorder(p->l, inorder, i);
+	inorder[(*i)++] = p->key;
+	storeInorder(p->r, inorder, i);
+}
+
+/*	required	*/
+node* sortedArrayToBST(int arr[], int start, int end)
+{
+	if(start>end) return 0;
+	int mid = (start+end)>>1;
+	node *root = new node(arr[mid]);
+	root->l =  sortedArrayToBST(arr,start,mid-1);
+	root->r = sortedArrayToBST(arr,mid+1,end);
+	return root;
+}
+
+/*	required	*/
+int diff(int* arr1,int* arr2,int* arr3, int m, int n)
+{
+	int i=0,j=0,k=0;
+	while(i<m && j<n) {
+		if(arr1[i]<arr2[j])
+			arr3[k++]=arr1[i++];
+		else if(arr2[j]<arr1[i])
+			j++;
+		else {i++;j++;}
+	}
+	while(i<m) arr3[k++]=arr1[i++];
+	return k;
+}
+
+/*	4	*/
+/*	O(m+n)	*/
+set difference(set& s1,set& s2) {
+	set ret;
+	int I1[100],I2[100],I3[100];
+	int m=0,n=0,k=0;
+	storeInorder(s1.tree->root,I1,&m);		//	O(m)
+	I1[m]=0;
+	storeInorder(s2.tree->root,I2,&n);		//	O(n)
+	I2[n]=0;
+	ret.tree->root = sortedArrayToBST(I3,0,diff(I1,I2,I3,m,n)-1);		//	O(m+n)
+	return ret;
+}
+
+int main() {
+	int arr1[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14};
+	int arr2[] = {7,6,5,4,3,2,1};
+	set a(arr1,14),b(arr2,7);
+	set c = difference(a,b);
+	c.print();
+	return 0;
+}
